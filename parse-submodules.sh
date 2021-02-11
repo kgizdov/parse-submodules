@@ -230,7 +230,7 @@ if [[ ${__USE_ARCHIVE} == 1 ]]; then
     cp '.gitmodules' "${gmdfile}"
 else
     # shallow clone repository locally
-    shallow_clone "${__GIT_REMOTE}" "${gcldir}"
+    shallow_clone "${__GIT_REMOTE}" "${gcldir}" &>/dev/null
     cd "${gcldir}"
     if ! check-submodules "${__GIT_REF}"; then
         fail "'.gitmodules' file does not exist in repo. Exiting..." 1
@@ -239,14 +239,6 @@ else
     git --no-pager --git-dir "${gcldir}/.git" show "${__GIT_REF}":"${__SUBMOD_FILE}" >"${gmdfile}"
 fi
 cd "${tempdir}"
-cat "${gmdfile}"
-for path in $(get-module-paths "${gmdfile}"); do
-    echo git submodule."${path}".url
-done
-
-for url in $(get-module-urls "${gmdfile}"); do
-    echo ${url}
-done
 echo '# Your sources array should look something like:
 sources=(
   "${pkgname}::'${__GIT_REMOTE}'#[commit/tag]='${__GIT_REF}'"'
