@@ -244,7 +244,12 @@ sources=(
   "${pkgname}::'${__GIT_REMOTE}'#[commit/tag]='${__GIT_REF}'"'
 __REMOTE_PREFIX="$(get-proto "${__GIT_REMOTE}")$(get-user "${__GIT_REMOTE}")$(get-host "${__GIT_REMOTE}")$(get-port "${__GIT_REMOTE}")"
 for name in $(get-module-names "${gmdfile}"); do
-    echo "  ${__REMOTE_PREFIX}$(get-repo-suffix-path "${__GIT_REMOTE}" "$(get-module-url "${gmdfile}" "${name}")")"
+    __mod_url="$(get-module-url "${gmdfile}" "${name}")"
+    if ! check-existance "${__mod_url}"; then
+        echo "  ${__REMOTE_PREFIX}$(get-repo-suffix-path "${__GIT_REMOTE}" "${__mod_url}")"
+    else
+        echo "${__mod_url}"
+    fi
 done
 echo ')'
 
@@ -256,4 +261,5 @@ prepare() {
 for name in $(get-module-names "${gmdfile}"); do
     echo "  git config submodule.\"${name}\".url "'"${srcdir}"/'"$(get-repo-name "$(get-module-url "${gmdfile}" "${name}")")"
 done
-echo '}'
+echo '  git submodule update --recursive
+}'
