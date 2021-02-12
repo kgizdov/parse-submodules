@@ -74,7 +74,7 @@ function get-submodules-file {
 }
 
 function shallow_clone {
-    git clone --no-checkout --depth 1 "${1}" "${2:-.}"
+    git clone --no-checkout --depth 1 -b "${2}" "${1}" "${3:-.}"
 }
 
 function get-module-names {
@@ -86,11 +86,15 @@ function get-module-urls {
 }
 
 function get-module-url {
-    git config --file "${1}" --get-regexp url | grep "${2}" | awk '{print $2}'
+    git config --file "${1}" --get-regexp url | grep "${2}.url" | awk '{print $2}'
 }
 
 function get-module-paths {
     git config --file "${1}" --get-regexp path | awk '{print $2}'
+}
+
+function get-module-path {
+    git config --file "${1}" --get-regexp path | grep "${2}.path" | awk '{print $2}'
 }
 
 function get-proto {
@@ -151,7 +155,7 @@ function get-host {
 }
 
 function get-repo-name {
-    echo "$(basename ${1} .git)"
+    echo "$(basename --suffix='.git' "${1}")"
 }
 
 function get-repo-suffix-path {
@@ -174,6 +178,7 @@ fi
 tempdir="$(mktemp -d)"
 gcldir="${tempdir}/gitdir"
 gmdfile="${tempdir}/found_gitmodules"
+outfile="${tempdir}/out"
 trap "rm -rf ${tempdir}; cd ${__CWKDIR}" EXIT
 
 cd "${tempdir}"
@@ -230,7 +235,7 @@ if [[ ${__USE_ARCHIVE} == 1 ]]; then
     cp '.gitmodules' "${gmdfile}"
 else
     # shallow clone repository locally
-    shallow_clone "${__GIT_REMOTE}" "${gcldir}" &>/dev/null
+    shallow_clone "${__GIT_REMOTE}" "${__GIT_REF}" "${gcldir}" &>/dev/null
     cd "${gcldir}"
     if ! check-submodules "${__GIT_REF}"; then
         fail "'.gitmodules' file does not exist in repo. Exiting..." 1
@@ -239,27 +244,30 @@ else
     git --no-pager --git-dir "${gcldir}/.git" show "${__GIT_REF}":"${__SUBMOD_FILE}" >"${gmdfile}"
 fi
 cd "${tempdir}"
+touch "${outfile}"
 echo '# Your sources array should look something like:
 sources=(
-  "${pkgname}::'${__GIT_REMOTE}'#[commit/tag]='${__GIT_REF}'"'
+  "${pkgname}::'${__GIT_REMOTE}'#[commit/tag]='${__GIT_REF}'"' >>"${outfile}"
 __REMOTE_PREFIX="$(get-proto "${__GIT_REMOTE}")$(get-user "${__GIT_REMOTE}")$(get-host "${__GIT_REMOTE}")$(get-port "${__GIT_REMOTE}")"
 for name in $(get-module-names "${gmdfile}"); do
     __mod_url="$(get-module-url "${gmdfile}" "${name}")"
     if ! check-existance "${__mod_url}"; then
-        echo "  ${__REMOTE_PREFIX}$(get-repo-suffix-path "${__GIT_REMOTE}" "${__mod_url}")"
+        echo "  ${__REMOTE_PREFIX}$(get-repo-suffix-path "${__GIT_REMOTE}" "${__mod_url}")" >>"${outfile}"
     else
-        echo "${__mod_url}"
+        echo "  ${__mod_url}" >>"${outfile}"
     fi
 done
-echo ')'
+echo ')' >>"${outfile}"
 
 echo '# Put the following in your PKGBUILD prepare function:
 prepare() {
   cd "${srcdir}/${pkgname}"
   git submodule init
-'
+' >>"${outfile}"
 for name in $(get-module-names "${gmdfile}"); do
-    echo "  git config submodule.\"${name}\".url "'"${srcdir}"/'"$(get-repo-name "$(get-module-url "${gmdfile}" "${name}")")"
+    echo "  git config submodule.\"${name}\".url "'"${srcdir}"/'"$(get-repo-name "$(get-module-url "${gmdfile}" "${name}")")" >>"${outfile}"
 done
 echo '  git submodule update --recursive
-}'
+}' >>"${outfile}"
+
+cat "${outfile}"
