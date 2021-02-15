@@ -4,19 +4,24 @@ A simple shell utility to parse Git submodule paths and URLs given only the supe
 ## Usage
 ```bash
 $ ./parse_submodules.sh -h
-parse-submodules.sh version 0.0.1
-
-Copyright (c) 2021 Konstantin Gizdov
+parse-submodules version 0.0.1
 
 Usage: ./parse-submodules.sh [options] <GIT REPO REMOTE URL> [<GIT REF>]
-
-note: This is work in progress.
 
     A utility to parse and print out useful information about
     a Git repository's submodule paths and URLs.
 
+arguments:
+    GIT REPO REMOTE URL: the URL of the remote Git repository (required)
+    GIT REF: Git repository reference to use (optional, default: HEAD)
+
+options:
+    -n  dry run: skip all actions that incur any changes
+
 helper options:
     -v  verbose mode
+
+    -V  print version and exit
 
     -h  print this help message and exit
 
@@ -27,7 +32,7 @@ helper options:
 $ ./parse-submodules.sh https://github.com/pytorch/pytorch.git v1.7.1
 # Your sources array should look something like:
 sources=(
-  "${pkgname}::https://github.com/pytorch/pytorch.git#[commit/tag]=v1.7.1"
+  "${pkgname}::https://github.com/pytorch/pytorch.git#commit=57bffc3a8e"
   https://github.com/seemethere/pybind11.git
   https://github.com/NVlabs/cub.git
   https://github.com/eigenteam/eigen-git-mirror.git
